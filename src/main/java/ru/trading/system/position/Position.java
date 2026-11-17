@@ -44,6 +44,14 @@ public class Position {
     @Column(nullable = false)
     private long version;
 
+    public Position(Account account, Instrument instrument) {
+        this.id = new PositionId(account.getId(), instrument.getSeccode());
+        this.account = account;
+        this.instrument = instrument;
+        this.quantity = 0;
+        this.reservedQuantity = 0;
+    }
+
     public boolean reserve(long amount) {
         if (quantity - reservedQuantity < amount) {
             return false;
@@ -54,5 +62,14 @@ public class Position {
 
     public void release(long amount) {
         reservedQuantity -= amount;
+    }
+
+    public void executeSell(long amount) {
+        quantity -= amount;
+        reservedQuantity -= amount;
+    }
+
+    public void credit(long amount) {
+        quantity += amount;
     }
 }

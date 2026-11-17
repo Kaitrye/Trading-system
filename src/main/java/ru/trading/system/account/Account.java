@@ -66,4 +66,13 @@ public class Account {
     public void release(BigDecimal amount) {
         reservedBalance = reservedBalance.subtract(amount);
     }
+
+    public void executeBuy(BigDecimal reservedAmount, BigDecimal cost) {
+        reservedBalance = reservedBalance.subtract(reservedAmount);
+        balance = balance.subtract(cost);
+    }
+
+    public void credit(BigDecimal amount) {
+        balance = balance.add(amount);
+    }
 }

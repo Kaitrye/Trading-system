@@ -76,4 +76,9 @@ public class Order {
     public void cancel() {
         status = OrderStatus.CANCELLED;
     }
+
+    public void fill(long amount) {
+        remainingQuantity -= amount;
+        status = remainingQuantity == 0 ? OrderStatus.FILLED : OrderStatus.PARTIALLY_FILLED;
+    }
 }

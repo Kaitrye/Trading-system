@@ -14,6 +14,8 @@ import ru.trading.system.order.dto.OrderResponse;
 import ru.trading.system.position.Position;
 import ru.trading.system.position.PositionId;
 import ru.trading.system.position.PositionRepository;
+import ru.trading.system.trade.Trade;
+import ru.trading.system.trade.TradeRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,6 +31,7 @@ public class OrderService {
     private final AccountRepository accountRepository;
     private final InstrumentRepository instrumentRepository;
     private final PositionRepository positionRepository;
+    private final TradeRepository tradeRepository;
 
     @Transactional
     public OrderResponse create(UUID userId, CreateOrderRequest request) {
@@ -50,6 +53,7 @@ public class OrderService {
 
         reserveForOrder(account, instrument, request);
         Order order = orderRepository.saveAndFlush(new Order(account, instrument, request.side(), request.price(), request.quantity()));
+        match(order);
         return toResponse(order);
     }
 
@@ -67,6 +71,44 @@ public class OrderService {
         if (!position.reserve(request.quantity())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient available shares");
         }
+    }
+
+    private void match(Order incomingOrder) {
+        List<Order> matchingOrders = incomingOrder.getSide() == OrderSide.BUY
+                ? orderRepository.findMatchingSellOrders(incomingOrder.getInstrument().getSeccode(), incomingOrder.getAccount().getId(),
+                        OrderSide.SELL, List.of(OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED), incomingOrder.getPrice())
+                : orderRepository.findMatchingBuyOrders(incomingOrder.getInstrument().getSeccode(), incomingOrder.getAccount().getId(),
+                        OrderSide.BUY, List.of(OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED), incomingOrder.getPrice());
+
+        for (Order restingOrder : matchingOrders) {
+            if (!incomingOrder.isActive()) {
+                break;
+            }
+            long quantity = Math.min(incomingOrder.getRemainingQuantity(), restingOrder.getRemainingQuantity());
+            Order buyOrder = incomingOrder.getSide() == OrderSide.BUY ? incomingOrder : restingOrder;
+            Order sellOrder = incomingOrder.getSide() == OrderSide.SELL ? incomingOrder : restingOrder;
+            executeTrade(buyOrder, sellOrder, restingOrder.getPrice(), quantity);
+        }
+    }
+
+    private void executeTrade(Order buyOrder, Order sellOrder, BigDecimal price, long quantity) {
+        BigDecimal reservedAmount = buyOrder.getPrice().multiply(BigDecimal.valueOf(quantity));
+        BigDecimal cost = price.multiply(BigDecimal.valueOf(quantity));
+        buyOrder.getAccount().executeBuy(reservedAmount, cost);
+        sellOrder.getAccount().credit(cost);
+
+        PositionId buyerPositionId = new PositionId(buyOrder.getAccount().getId(), buyOrder.getInstrument().getSeccode());
+        Position buyerPosition = positionRepository.findById(buyerPositionId)
+                .orElseGet(() -> positionRepository.save(new Position(buyOrder.getAccount(), buyOrder.getInstrument())));
+        buyerPosition.credit(quantity);
+
+        Position sellerPosition = positionRepository.findById(new PositionId(sellOrder.getAccount().getId(), sellOrder.getInstrument().getSeccode()))
+                .orElseThrow(() -> new IllegalStateException("Reserved seller position not found"));
+        sellerPosition.executeSell(quantity);
+
+        buyOrder.fill(quantity);
+        sellOrder.fill(quantity);
+        tradeRepository.save(new Trade(buyOrder.getInstrument(), price, quantity, buyOrder, sellOrder));
     }
 
     @Transactional(readOnly = true)
