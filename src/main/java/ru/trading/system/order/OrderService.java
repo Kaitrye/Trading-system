@@ -16,6 +16,7 @@ import ru.trading.system.position.PositionId;
 import ru.trading.system.position.PositionRepository;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -66,6 +67,13 @@ public class OrderService {
         if (!position.reserve(request.quantity())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient available shares");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> findForUser(UUID userId) {
+        return orderRepository.findByAccountUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional
