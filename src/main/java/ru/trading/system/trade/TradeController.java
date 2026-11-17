@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.trading.system.trade.dto.MarketSummaryResponse;
 import ru.trading.system.trade.dto.TradeHistoryResponse;
 
 @Validated
@@ -19,6 +20,11 @@ import ru.trading.system.trade.dto.TradeHistoryResponse;
 @RequiredArgsConstructor
 public class TradeController {
     private final TradeService tradeService;
+
+    @GetMapping("/{ticker}/summary")
+    public MarketSummaryResponse findSummary( String ticker) {
+        return tradeService.findSummary(ticker);
+    }
 
     @GetMapping("/{ticker}/trades")
     public TradeHistoryResponse findHistory(
