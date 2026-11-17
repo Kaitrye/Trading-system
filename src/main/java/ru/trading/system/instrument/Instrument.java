@@ -40,4 +40,8 @@ public class Instrument {
 
     @Column(nullable = false)
     private boolean active;
+
+    public Instrument(String seccode, String name, int lotSize, BigDecimal minStep, String currency) { this.seccode = seccode; this.type = "STOCK"; this.name = name; this.lotSize = lotSize; this.minStep = minStep; this.currency = currency; this.active = true; }
+
+    public void changeStatus(boolean active) { this.active = active; }
 }
