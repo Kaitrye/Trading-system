@@ -18,6 +18,30 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findByAccountUserIdOrderByCreatedAtDesc(UUID userId);
 
+    @Query("""
+            select o.price as price, sum(o.remainingQuantity) as quantity from Order o
+            where o.instrument.seccode = :ticker and o.side = :side and o.status in :statuses
+            group by o.price
+            order by o.price desc
+            """)
+    List<OrderBookLevel> findBuyLevels(
+            @Param("ticker") String ticker,
+            @Param("side") OrderSide side,
+            @Param("statuses") Collection<OrderStatus> statuses
+    );
+
+    @Query("""
+            select o.price as price, sum(o.remainingQuantity) as quantity from Order o
+            where o.instrument.seccode = :ticker and o.side = :side and o.status in :statuses
+            group by o.price
+            order by o.price asc
+            """)
+    List<OrderBookLevel> findSellLevels(
+            @Param("ticker") String ticker,
+            @Param("side") OrderSide side,
+            @Param("statuses") Collection<OrderStatus> statuses
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select o from Order o
