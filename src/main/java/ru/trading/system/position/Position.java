@@ -51,4 +51,8 @@ public class Position {
         reservedQuantity += amount;
         return true;
     }
+
+    public void release(long amount) {
+        reservedQuantity -= amount;
+    }
 }

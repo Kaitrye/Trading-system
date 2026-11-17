@@ -68,6 +68,25 @@ public class OrderService {
         }
     }
 
+    @Transactional
+    public OrderResponse cancel(UUID userId, UUID orderId) {
+        Order order = orderRepository.findByIdAndAccountUserId(orderId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        if (!order.isActive()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is no longer active");
+        }
+
+        if (order.getSide() == OrderSide.BUY) {
+            order.getAccount().release(order.getPrice().multiply(BigDecimal.valueOf(order.getRemainingQuantity())));
+        } else {
+            Position position = positionRepository.findById(new PositionId(order.getAccount().getId(), order.getInstrument().getSeccode()))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Position not found"));
+            position.release(order.getRemainingQuantity());
+        }
+        order.cancel();
+        return toResponse(order);
+    }
+
     private OrderResponse toResponse(Order order) {
         return new OrderResponse(order.getId(), order.getAccount().getId(), order.getInstrument().getSeccode(),
                 order.getSide(), order.getPrice(), order.getQuantity(), order.getRemainingQuantity(),

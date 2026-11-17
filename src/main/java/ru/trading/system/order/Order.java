@@ -68,4 +68,12 @@ public class Order {
         this.remainingQuantity = quantity;
         this.status = OrderStatus.NEW;
     }
+
+    public boolean isActive() {
+        return status == OrderStatus.NEW || status == OrderStatus.PARTIALLY_FILLED;
+    }
+
+    public void cancel() {
+        status = OrderStatus.CANCELLED;
+    }
 }

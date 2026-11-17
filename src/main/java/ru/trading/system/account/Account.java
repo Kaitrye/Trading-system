@@ -62,4 +62,8 @@ public class Account {
         reservedBalance = reservedBalance.add(amount);
         return true;
     }
+
+    public void release(BigDecimal amount) {
+        reservedBalance = reservedBalance.subtract(amount);
+    }
 }
