@@ -43,4 +43,12 @@ public class Position {
     @Version
     @Column(nullable = false)
     private long version;
+
+    public boolean reserve(long amount) {
+        if (quantity - reservedQuantity < amount) {
+            return false;
+        }
+        reservedQuantity += amount;
+        return true;
+    }
 }

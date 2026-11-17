@@ -54,4 +54,12 @@ public class Account {
         this.balance = BigDecimal.ZERO;
         this.reservedBalance = BigDecimal.ZERO;
     }
+
+    public boolean reserve(BigDecimal amount) {
+        if (balance.subtract(reservedBalance).compareTo(amount) < 0) {
+            return false;
+        }
+        reservedBalance = reservedBalance.add(amount);
+        return true;
+    }
 }
