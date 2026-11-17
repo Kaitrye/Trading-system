@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import ru.trading.system.account.AccountService;
 import ru.trading.system.user.Role;
 import ru.trading.system.user.User;
 import ru.trading.system.user.UserRepository;
@@ -21,6 +22,7 @@ import java.util.Locale;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final AccountService accountService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -34,6 +36,7 @@ public class AuthService {
 
         User user = new User(email, passwordEncoder.encode(request.password()), Role.USER);
         User savedUser = userRepository.saveAndFlush(user);
+        accountService.createDefaultAccount(savedUser);
 
         return new UserResponse(
                 savedUser.getId(),
