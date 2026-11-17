@@ -8,7 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import ru.trading.system.instrument.InstrumentRepository;
+import ru.trading.system.order.OrderSide;
 import ru.trading.system.trade.dto.MarketSummaryResponse;
+import ru.trading.system.trade.dto.MyTradeHistoryResponse;
+import ru.trading.system.trade.dto.MyTradeResponse;
 import ru.trading.system.trade.dto.TradeHistoryResponse;
 import ru.trading.system.trade.dto.TradeResponse;
 
@@ -16,6 +19,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Locale;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,30 @@ public class TradeService {
     private static final ZoneId EXCHANGE_ZONE = ZoneId.of("Europe/Moscow");
 
     private final InstrumentRepository instrumentRepository;
+
+    @Transactional(readOnly = true)
+    public MyTradeHistoryResponse findForUser(UUID userId, int page, int size) {
+        Page<MyTradeResponse> tradePage = tradeRepository.findForUser(userId, PageRequest.of(page, size))
+                .map(trade -> {
+                    boolean isBuyer = trade.getBuyOrder().getAccount().getUser().getId().equals(userId);
+                    return new MyTradeResponse(
+                            trade.getId(),
+                            isBuyer ? trade.getBuyOrder().getAccount().getId() : trade.getSellOrder().getAccount().getId(),
+                            trade.getInstrument().getSeccode(),
+                            isBuyer ? OrderSide.BUY : OrderSide.SELL,
+                            trade.getPrice(),
+                            trade.getQuantity(),
+                            trade.getExecutedAt()
+                    );
+                });
+        return new MyTradeHistoryResponse(
+                tradePage.getContent(),
+                tradePage.getNumber(),
+                tradePage.getSize(),
+                tradePage.getTotalElements(),
+                tradePage.getTotalPages()
+        );
+    }
 
     @Transactional(readOnly = true)
     public MarketSummaryResponse findSummary(String rawTicker) {

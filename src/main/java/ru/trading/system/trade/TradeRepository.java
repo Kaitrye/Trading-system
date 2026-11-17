@@ -16,6 +16,13 @@ public interface TradeRepository extends JpaRepository<Trade, UUID> {
     Optional<Trade> findFirstByInstrumentSeccodeOrderByExecutedAtDesc(String ticker);
 
     @Query("""
+            select t from Trade t
+            where t.buyOrder.account.user.id = :userId or t.sellOrder.account.user.id = :userId
+            order by t.executedAt desc
+            """)
+    Page<Trade> findForUser(@Param("userId") UUID userId, Pageable pageable);
+
+    @Query("""
             select min(t.price) as lowPrice, max(t.price) as highPrice,
                    sum(t.quantity) as volume, count(t) as tradeCount
             from Trade t
