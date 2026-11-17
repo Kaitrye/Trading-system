@@ -9,6 +9,10 @@ import ru.trading.system.account.AccountRepository;
 import ru.trading.system.instrument.Instrument;
 import ru.trading.system.instrument.InstrumentRepository;
 import ru.trading.system.order.dto.CreateOrderRequest;
+import ru.trading.system.operation.AccountOperationRepository;
+import ru.trading.system.operation.AccountOperationService;
+import ru.trading.system.operation.OperationType;
+import ru.trading.system.operation.dto.AccountOperationHistoryResponse;
 import ru.trading.system.position.Position;
 import ru.trading.system.position.PositionId;
 import ru.trading.system.position.PositionRepository;
@@ -42,6 +46,10 @@ class OrderMatchingIntegrationTest {
     private TradeRepository tradeRepository;
     @Autowired
     private TradeService tradeService;
+    @Autowired
+    private AccountOperationRepository accountOperationRepository;
+    @Autowired
+    private AccountOperationService accountOperationService;
 
     @Test
     void matchesOrdersAtRestingOrderPriceAndUpdatesPortfolios() {

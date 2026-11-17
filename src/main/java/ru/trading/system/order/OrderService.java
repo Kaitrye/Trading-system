@@ -11,6 +11,9 @@ import ru.trading.system.instrument.Instrument;
 import ru.trading.system.instrument.InstrumentRepository;
 import ru.trading.system.order.dto.CreateOrderRequest;
 import ru.trading.system.order.dto.OrderResponse;
+import ru.trading.system.operation.AccountOperation;
+import ru.trading.system.operation.AccountOperationRepository;
+import ru.trading.system.operation.OperationType;
 import ru.trading.system.position.Position;
 import ru.trading.system.position.PositionId;
 import ru.trading.system.position.PositionRepository;
@@ -32,6 +35,7 @@ public class OrderService {
     private final InstrumentRepository instrumentRepository;
     private final PositionRepository positionRepository;
     private final TradeRepository tradeRepository;
+    private final AccountOperationRepository accountOperationRepository;
 
     @Transactional
     public OrderResponse create(UUID userId, CreateOrderRequest request) {
@@ -108,7 +112,11 @@ public class OrderService {
 
         buyOrder.fill(quantity);
         sellOrder.fill(quantity);
-        tradeRepository.save(new Trade(buyOrder.getInstrument(), price, quantity, buyOrder, sellOrder));
+        Trade trade = tradeRepository.save(new Trade(buyOrder.getInstrument(), price, quantity, buyOrder, sellOrder));
+        accountOperationRepository.saveAll(List.of(
+                new AccountOperation(buyOrder.getAccount(), trade, OperationType.TRADE_BUY, cost.negate()),
+                new AccountOperation(sellOrder.getAccount(), trade, OperationType.TRADE_SELL, cost)
+        ));
     }
 
     @Transactional(readOnly = true)
