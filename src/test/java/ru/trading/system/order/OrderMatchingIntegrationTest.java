@@ -13,6 +13,9 @@ import ru.trading.system.position.Position;
 import ru.trading.system.position.PositionId;
 import ru.trading.system.position.PositionRepository;
 import ru.trading.system.trade.TradeRepository;
+import ru.trading.system.trade.TradeService;
+import ru.trading.system.trade.dto.TradeHistoryResponse;
+import ru.trading.system.trade.dto.TradeResponse;
 import ru.trading.system.user.Role;
 import ru.trading.system.user.User;
 import ru.trading.system.user.UserRepository;
@@ -37,6 +40,8 @@ class OrderMatchingIntegrationTest {
     private PositionRepository positionRepository;
     @Autowired
     private TradeRepository tradeRepository;
+    @Autowired
+    private TradeService tradeService;
 
     @Test
     void matchesOrdersAtRestingOrderPriceAndUpdatesPortfolios() {
@@ -54,6 +59,12 @@ class OrderMatchingIntegrationTest {
         orderService.create(buyer.getId(), new CreateOrderRequest("SBER", OrderSide.BUY, new BigDecimal("110"), 10));
 
         assertEquals(1, tradeRepository.count());
+        TradeHistoryResponse history = tradeService.findForInstrument("SBER", 0, 10);
+        assertEquals(1, history.totalElements());
+        assertEquals(1, history.totalPages());
+        assertEquals(1, history.content().size());
+        assertEquals(0, new BigDecimal("100").compareTo(history.content().getFirst().price()));
+        assertEquals(10, history.content().getFirst().quantity());
         assertEquals(new BigDecimal("200"), buyerAccount.getBalance());
         assertEquals(BigDecimal.ZERO, buyerAccount.getReservedBalance());
         assertEquals(new BigDecimal("1000"), sellerAccount.getBalance());
