@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 import ru.trading.system.instrument.dto.CreateInstrumentRequest;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,7 +41,27 @@ class InstrumentServiceTest {
         assertEquals("SBER", response.ticker());
         assertEquals("Сбербанк", response.name());
         assertEquals("RUB", response.currency());
+        assertEquals(InstrumentType.STOCK, response.type());
         verify(instrumentRepository).existsById("SBER");
+    }
+
+    @Test
+    void createsBondWithCouponSchedule() {
+        when(instrumentRepository.existsById("OFZ26238")).thenReturn(false);
+        when(instrumentRepository.save(any(Instrument.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = instrumentService.create(new CreateInstrumentRequest(
+                "ofz26238", "ОФЗ 26238", 1, new BigDecimal("0.01"), "RUB",
+                InstrumentType.BOND, new BigDecimal("1000"), LocalDate.of(2041, 5, 15),
+                new BigDecimal("12.50"), 6, LocalDate.of(2027, 5, 15)
+        ));
+
+        assertEquals(InstrumentType.BOND, response.type());
+        assertEquals(new BigDecimal("1000"), response.nominal());
+        assertEquals(LocalDate.of(2041, 5, 15), response.maturityDate());
+        assertEquals(new BigDecimal("12.50"), response.couponRate());
+        assertEquals(6, response.couponFrequencyMonths());
+        assertEquals(LocalDate.of(2027, 5, 15), response.nextCouponDate());
     }
 
     @Test

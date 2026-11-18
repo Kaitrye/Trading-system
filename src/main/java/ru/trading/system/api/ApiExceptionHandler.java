@@ -67,6 +67,9 @@ public class ApiExceptionHandler {
             case "Price must be a multiple of minimum step" -> "INVALID_PRICE_STEP";
             case "Only RUB instruments are supported" -> "UNSUPPORTED_CURRENCY";
             case "Order is no longer active" -> "ORDER_NOT_ACTIVE";
+            case "Bond details are required for bond instruments" -> "BOND_DETAILS_REQUIRED";
+            case "Stock instrument must not contain bond details" -> "STOCK_BOND_DETAILS_FORBIDDEN";
+            case "Coupon date must not be after maturity date" -> "INVALID_COUPON_DATE";
             default -> "REQUEST_" + message.replaceAll("[^A-Za-z0-9]+", "_").toUpperCase();
         };
     }
