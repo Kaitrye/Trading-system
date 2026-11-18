@@ -1,12 +1,18 @@
 package ru.trading.system.account;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import ru.trading.system.account.dto.AccountResponse;
+import ru.trading.system.operation.AccountOperation;
+import ru.trading.system.operation.AccountOperationRepository;
+import ru.trading.system.operation.OperationType;
 import ru.trading.system.user.User;
 import ru.trading.system.user.UserRepository;
 
@@ -16,6 +22,7 @@ public class AccountService {
   private static final String RUB = "RUB";
   private final AccountRepository accountRepository;
   private final UserRepository userRepository;
+  private final AccountOperationRepository accountOperationRepository;
 
   public void createDefaultAccount(User user) {
     accountRepository.save(new Account(user, RUB));
@@ -38,6 +45,19 @@ public class AccountService {
     return accountRepository.findByUserIdOrderByCurrencyAsc(userId).stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  @Transactional
+  public AccountResponse deposit(UUID accountId, BigDecimal amount) {
+    Account account =
+        accountRepository
+            .findById(accountId)
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+    account.credit(amount);
+    accountOperationRepository.save(
+        new AccountOperation(account, null, OperationType.ADMIN_DEPOSIT, amount));
+    return toResponse(account);
   }
 
   private AccountResponse toResponse(Account account) {

@@ -8,5 +8,6 @@ public enum OperationType {
   FX_BUY_BASE,
   FX_BUY_QUOTE,
   FX_SELL_BASE,
-  FX_SELL_QUOTE
+  FX_SELL_QUOTE,
+  ADMIN_DEPOSIT
 }
