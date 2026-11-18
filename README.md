@@ -18,6 +18,23 @@ REST API торговой системы, выполненная как **тес
 
 Текущая версия поддерживает акции и облигации в RUB. Для облигации хранятся номинал, дата погашения, годовая ставка купона, периодичность и ближайшая дата купона. Купоны начисляются по ближайшей дате купона, а в дату погашения активные заявки снимаются, владельцам выплачивается номинал и инструмент деактивируется. Пополнение счёта и выдача бумаг не представлены публичными API: в реальной системе это отдельные брокерские процессы.
 
+## Архитектура
+
+```mermaid
+flowchart LR
+    Client[Клиент / Swagger] --> Security[Spring Security + JWT]
+    Security --> Controllers[REST-контроллеры]
+    Controllers --> Services[Сервисы бизнес-логики]
+    Services --> Order[Заявки и сведение]
+    Services --> Corporate[Купоны и погашение]
+    Order --> Repositories[Spring Data JPA]
+    Corporate --> Repositories
+    Repositories --> Database[(PostgreSQL)]
+    Scheduler[Планировщик 00:05 MSK] --> Corporate
+```
+
+Контроллеры принимают и валидируют HTTP-запросы, сервисы реализуют правила предметной области, а репозитории сохраняют данные в PostgreSQL. Модуль `order` отвечает за резервы и сведение заявок; `corporate` обрабатывает купоны и погашение облигаций. Flyway применяет миграции при старте приложения.
+
 ## Технологии
 
 - Java 21 и Spring Boot 3.5.16;
@@ -110,6 +127,75 @@ Authorization: Bearer <accessToken>
 ~~~
 
 В Swagger UI нажмите Authorize, вставьте только accessToken и подтвердите: префикс Bearer будет добавлен автоматически.
+
+## Примеры curl
+
+Во всех примерах приложение доступно по `http://localhost:8080`.
+
+Регистрация пользователя:
+
+```bash
+curl -i -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  --data @- <<JSON
+{"email":"investor@example.com","password":"password123"}
+JSON
+```
+
+Вход и получение токена:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  --data @- <<JSON
+{"email":"investor@example.com","password":"password123"}
+JSON
+```
+
+Скопируйте поле `accessToken` из ответа в переменную `TOKEN`. Далее его можно использовать в защищённых запросах:
+
+```bash
+TOKEN="<accessToken>"
+
+curl http://localhost:8080/api/v1/instruments \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Создание лимитной заявки:
+
+```bash
+curl -i -X POST http://localhost:8080/api/v1/orders \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  --data @- <<JSON
+{"ticker":"SBER","side":"BUY","price":250.00,"quantity":10}
+JSON
+```
+
+Создание облигации доступно только администратору. Сначала получите токен учётной записи, заданной через `BOOTSTRAP_ADMIN_EMAIL` и `BOOTSTRAP_ADMIN_PASSWORD`, затем подставьте его вместо `ADMIN_TOKEN`:
+
+```bash
+ADMIN_TOKEN="<adminAccessToken>"
+
+curl -i -X POST http://localhost:8080/api/v1/admin/instruments \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data @- <<JSON
+{
+  "ticker":"OFZ26238",
+  "name":"ОФЗ 26238",
+  "lotSize":1,
+  "minStep":0.01,
+  "currency":"RUB",
+  "type":"BOND",
+  "nominal":1000.00,
+  "maturityDate":"2041-05-15",
+  "couponRate":12.50,
+  "couponFrequencyMonths":6,
+  "nextCouponDate":"2027-05-15"
+}
+JSON
+```
 
 ## API
 
