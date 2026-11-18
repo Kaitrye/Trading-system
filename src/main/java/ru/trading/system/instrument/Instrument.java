@@ -91,4 +91,12 @@ public class Instrument {
     public void changeStatus(boolean active) {
         this.active = active;
     }
+
+    public void advanceCouponDate() {
+        nextCouponDate = nextCouponDate.plusMonths(couponFrequencyMonths);
+    }
+
+    public void deactivate() {
+        active = false;
+    }
 }

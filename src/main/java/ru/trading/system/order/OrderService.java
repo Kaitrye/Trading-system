@@ -134,15 +134,31 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is no longer active");
         }
 
-        if (order.getSide() == OrderSide.BUY) {
-            order.getAccount().release(order.getPrice().multiply(BigDecimal.valueOf(order.getRemainingQuantity())));
-        } else {
-            Position position = positionRepository.findById(new PositionId(order.getAccount().getId(), order.getInstrument().getSeccode()))
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Position not found"));
-            position.release(order.getRemainingQuantity());
-        }
+        releaseReservation(order);
         order.cancel();
         return toResponse(order);
+    }
+
+    @Transactional
+    public int cancelActiveOrdersForInstrument(String ticker) {
+        List<Order> orders = orderRepository.lockActiveOrdersByInstrument(
+                ticker, List.of(OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED)
+        );
+        for (Order order : orders) {
+            releaseReservation(order);
+            order.cancel();
+        }
+        return orders.size();
+    }
+
+    private void releaseReservation(Order order) {
+        if (order.getSide() == OrderSide.BUY) {
+            order.getAccount().release(order.getPrice().multiply(BigDecimal.valueOf(order.getRemainingQuantity())));
+            return;
+        }
+        Position position = positionRepository.findById(new PositionId(order.getAccount().getId(), order.getInstrument().getSeccode()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Position not found"));
+        position.release(order.getRemainingQuantity());
     }
 
     private OrderResponse toResponse(Order order) {

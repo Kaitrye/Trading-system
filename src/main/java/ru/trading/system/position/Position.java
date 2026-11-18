@@ -72,4 +72,11 @@ public class Position {
     public void credit(long amount) {
         quantity += amount;
     }
+
+    public void redeem() {
+        if (reservedQuantity != 0) {
+            throw new IllegalStateException("Cannot redeem a position with reserved securities");
+        }
+        quantity = 0;
+    }
 }

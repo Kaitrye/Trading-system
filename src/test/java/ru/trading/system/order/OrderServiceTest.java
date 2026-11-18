@@ -75,4 +75,22 @@ class OrderServiceTest {
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         verify(orderRepository, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());
     }
+
+    @Test
+    void cancelsActiveBuyOrdersForInstrumentAndReleasesReservedBalance() {
+        Account account = new Account(null, "RUB");
+        account.credit(new BigDecimal("100"));
+        account.reserve(new BigDecimal("50"));
+        Instrument instrument = new Instrument("OFZ26238", "ОФЗ 26238", 1, new BigDecimal("0.01"), "RUB");
+        Order order = new Order(account, instrument, OrderSide.BUY, new BigDecimal("5"), 10);
+        when(orderRepository.lockActiveOrdersByInstrument(
+                "OFZ26238", java.util.List.of(OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED)
+        )).thenReturn(java.util.List.of(order));
+
+        int cancelled = orderService.cancelActiveOrdersForInstrument("OFZ26238");
+
+        assertEquals(1, cancelled);
+        assertEquals(new BigDecimal("0"), account.getReservedBalance());
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    }
 }

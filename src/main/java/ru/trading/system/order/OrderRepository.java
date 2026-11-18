@@ -18,6 +18,16 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findByAccountUserIdOrderByCreatedAtDesc(UUID userId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select o from Order o
+            where o.instrument.seccode = :ticker and o.status in :statuses
+            """)
+    List<Order> lockActiveOrdersByInstrument(
+            @Param("ticker") String ticker,
+            @Param("statuses") Collection<OrderStatus> statuses
+    );
+
     @Query("""
             select o.price as price, sum(o.remainingQuantity) as quantity from Order o
             where o.instrument.seccode = :ticker and o.side = :side and o.status in :statuses
