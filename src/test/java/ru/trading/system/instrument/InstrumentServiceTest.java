@@ -110,4 +110,60 @@ class InstrumentServiceTest {
 
     assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
   }
+
+  @Test
+  void createsCurrencyPairWithNormalizedCurrencies() {
+    when(instrumentRepository.existsById("USDRUB")).thenReturn(false);
+    when(instrumentRepository.save(any(Instrument.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    var response =
+        instrumentService.create(
+            new CreateInstrumentRequest(
+                "usdrub",
+                "US Dollar / Russian Ruble",
+                1,
+                new BigDecimal("0.0001"),
+                "rub",
+                InstrumentType.CURRENCY_PAIR,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "usd",
+                "rub"));
+
+    assertEquals(InstrumentType.CURRENCY_PAIR, response.type());
+    assertEquals("USD", response.baseCurrency());
+    assertEquals("RUB", response.quoteCurrency());
+    assertEquals("RUB", response.currency());
+  }
+
+  @Test
+  void rejectsCurrencyPairWithSameBaseAndQuoteCurrencies() {
+    when(instrumentRepository.existsById("USDXUSD")).thenReturn(false);
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                instrumentService.create(
+                    new CreateInstrumentRequest(
+                        "usdxusd",
+                        "US Dollar / US Dollar",
+                        1,
+                        new BigDecimal("0.0001"),
+                        "USD",
+                        InstrumentType.CURRENCY_PAIR,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "USD",
+                        "USD")));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+  }
 }

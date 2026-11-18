@@ -15,4 +15,6 @@ public record InstrumentResponse(
     LocalDate maturityDate,
     BigDecimal couponRate,
     Integer couponFrequencyMonths,
-    LocalDate nextCouponDate) {}
+    LocalDate nextCouponDate,
+    String baseCurrency,
+    String quoteCurrency) {}

@@ -48,10 +48,37 @@ class InstrumentRepositoryIntegrationTest {
     Instrument savedBond = instrumentRepository.findById(bond.getSeccode()).orElseThrow();
 
     assertEquals(InstrumentType.BOND, savedBond.getType());
-    assertEquals(new BigDecimal("1000.0000"), savedBond.getNominal());
+    assertEquals(0, new BigDecimal("1000.0000").compareTo(savedBond.getNominal()));
     assertEquals(LocalDate.of(2041, 5, 15), savedBond.getMaturityDate());
     assertEquals(new BigDecimal("12.5000"), savedBond.getCouponRate());
     assertEquals(6, savedBond.getCouponFrequencyMonths());
     assertEquals(LocalDate.of(2027, 5, 15), savedBond.getNextCouponDate());
+  }
+
+  @Test
+  void persistsCurrencyPairDetails() {
+    Instrument currencyPair =
+        instrumentRepository.save(
+            new Instrument(
+                "USDRUB",
+                "US Dollar / Russian Ruble",
+                1,
+                new BigDecimal("0.0001"),
+                "RUB",
+                InstrumentType.CURRENCY_PAIR,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "USD",
+                "RUB"));
+
+    Instrument savedCurrencyPair =
+        instrumentRepository.findById(currencyPair.getSeccode()).orElseThrow();
+
+    assertEquals(InstrumentType.CURRENCY_PAIR, savedCurrencyPair.getType());
+    assertEquals("USD", savedCurrencyPair.getBaseCurrency());
+    assertEquals("RUB", savedCurrencyPair.getQuoteCurrency());
   }
 }

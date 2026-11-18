@@ -2,5 +2,6 @@ package ru.trading.system.instrument;
 
 public enum InstrumentType {
   STOCK,
-  BOND
+  BOND,
+  CURRENCY_PAIR
 }

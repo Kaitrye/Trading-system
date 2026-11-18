@@ -53,6 +53,14 @@ public class Instrument {
 
   private LocalDate nextCouponDate;
 
+  @JdbcTypeCode(Types.CHAR)
+  @Column(columnDefinition = "char(3)")
+  private String baseCurrency;
+
+  @JdbcTypeCode(Types.CHAR)
+  @Column(columnDefinition = "char(3)")
+  private String quoteCurrency;
+
   @Column(nullable = false)
   private boolean active;
 
@@ -64,6 +72,8 @@ public class Instrument {
         minStep,
         currency,
         InstrumentType.STOCK,
+        null,
+        null,
         null,
         null,
         null,
@@ -83,6 +93,36 @@ public class Instrument {
       BigDecimal couponRate,
       Integer couponFrequencyMonths,
       LocalDate nextCouponDate) {
+    this(
+        seccode,
+        name,
+        lotSize,
+        minStep,
+        currency,
+        type,
+        nominal,
+        maturityDate,
+        couponRate,
+        couponFrequencyMonths,
+        nextCouponDate,
+        null,
+        null);
+  }
+
+  public Instrument(
+      String seccode,
+      String name,
+      int lotSize,
+      BigDecimal minStep,
+      String currency,
+      InstrumentType type,
+      BigDecimal nominal,
+      LocalDate maturityDate,
+      BigDecimal couponRate,
+      Integer couponFrequencyMonths,
+      LocalDate nextCouponDate,
+      String baseCurrency,
+      String quoteCurrency) {
     this.seccode = seccode;
     this.name = name;
     this.lotSize = lotSize;
@@ -94,6 +134,8 @@ public class Instrument {
     this.couponRate = couponRate;
     this.couponFrequencyMonths = couponFrequencyMonths;
     this.nextCouponDate = nextCouponDate;
+    this.baseCurrency = baseCurrency;
+    this.quoteCurrency = quoteCurrency;
     this.active = true;
   }
 

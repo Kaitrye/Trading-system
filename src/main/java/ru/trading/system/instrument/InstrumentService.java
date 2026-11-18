@@ -37,7 +37,11 @@ public class InstrumentService {
     if (instrumentRepository.existsById(ticker)) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Instrument already exists");
     }
-    validateTypeSpecificDetails(request);
+
+    String currency = normalizeCurrency(request.currency());
+    String baseCurrency = nullableCurrency(request.baseCurrency());
+    String quoteCurrency = nullableCurrency(request.quoteCurrency());
+    validateTypeSpecificDetails(request, currency, baseCurrency, quoteCurrency);
 
     Instrument instrument =
         new Instrument(
@@ -45,13 +49,15 @@ public class InstrumentService {
             request.name().trim(),
             request.lotSize(),
             request.minStep(),
-            request.currency().trim().toUpperCase(Locale.ROOT),
+            currency,
             request.type(),
             request.nominal(),
             request.maturityDate(),
             request.couponRate(),
             request.couponFrequencyMonths(),
-            request.nextCouponDate());
+            request.nextCouponDate(),
+            baseCurrency,
+            quoteCurrency);
     return toResponse(instrumentRepository.save(instrument));
   }
 
@@ -66,35 +72,69 @@ public class InstrumentService {
     return toResponse(instrument);
   }
 
-  private void validateTypeSpecificDetails(CreateInstrumentRequest request) {
+  private void validateTypeSpecificDetails(
+      CreateInstrumentRequest request, String currency, String baseCurrency, String quoteCurrency) {
     boolean hasBondDetails =
         request.nominal() != null
             || request.maturityDate() != null
             || request.couponRate() != null
             || request.couponFrequencyMonths() != null
             || request.nextCouponDate() != null;
+    boolean hasCurrencyPairDetails = baseCurrency != null || quoteCurrency != null;
 
     if (request.type() == InstrumentType.STOCK) {
-      if (hasBondDetails) {
+      if (hasBondDetails || hasCurrencyPairDetails) {
         throw new ResponseStatusException(
-            HttpStatus.BAD_REQUEST, "Stock instrument must not contain bond details");
+            HttpStatus.BAD_REQUEST, "Stock instrument must not contain type-specific details");
       }
       return;
     }
 
-    if (!hasBondDetails
-        || request.nominal() == null
-        || request.maturityDate() == null
-        || request.couponRate() == null
-        || request.couponFrequencyMonths() == null
-        || request.nextCouponDate() == null) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Bond details are required for bond instruments");
+    if (request.type() == InstrumentType.BOND) {
+      if (hasCurrencyPairDetails) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Bond instrument must not contain currency pair details");
+      }
+      if (!hasBondDetails
+          || request.nominal() == null
+          || request.maturityDate() == null
+          || request.couponRate() == null
+          || request.couponFrequencyMonths() == null
+          || request.nextCouponDate() == null) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Bond details are required for bond instruments");
+      }
+      if (request.nextCouponDate().isAfter(request.maturityDate())) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Coupon date must not be after maturity date");
+      }
+      return;
     }
-    if (request.nextCouponDate().isAfter(request.maturityDate())) {
+
+    if (hasBondDetails) {
       throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Coupon date must not be after maturity date");
+          HttpStatus.BAD_REQUEST, "Currency pair must not contain bond details");
     }
+    if (baseCurrency == null || quoteCurrency == null) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Base and quote currencies are required for currency pair");
+    }
+    if (baseCurrency.equals(quoteCurrency)) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Base and quote currencies must be different");
+    }
+    if (!currency.equals(quoteCurrency)) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Instrument currency must match quote currency");
+    }
+  }
+
+  private String normalizeCurrency(String currency) {
+    return currency.trim().toUpperCase(Locale.ROOT);
+  }
+
+  private String nullableCurrency(String currency) {
+    return currency == null ? null : normalizeCurrency(currency);
   }
 
   private InstrumentResponse toResponse(Instrument instrument) {
@@ -109,6 +149,8 @@ public class InstrumentService {
         instrument.getMaturityDate(),
         instrument.getCouponRate(),
         instrument.getCouponFrequencyMonths(),
-        instrument.getNextCouponDate());
+        instrument.getNextCouponDate(),
+        instrument.getBaseCurrency(),
+        instrument.getQuoteCurrency());
   }
 }

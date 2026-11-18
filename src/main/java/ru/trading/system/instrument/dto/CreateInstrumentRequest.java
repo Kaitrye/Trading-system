@@ -21,7 +21,9 @@ public record CreateInstrumentRequest(
     LocalDate maturityDate,
     @DecimalMin(value = "0.0001") BigDecimal couponRate,
     @Positive Integer couponFrequencyMonths,
-    LocalDate nextCouponDate) {
+    LocalDate nextCouponDate,
+    @Pattern(regexp = "[A-Za-z]{3}") String baseCurrency,
+    @Pattern(regexp = "[A-Za-z]{3}") String quoteCurrency) {
   public CreateInstrumentRequest(
       String ticker, String name, int lotSize, BigDecimal minStep, String currency) {
     this(
@@ -34,6 +36,36 @@ public record CreateInstrumentRequest(
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null);
+  }
+
+  public CreateInstrumentRequest(
+      String ticker,
+      String name,
+      int lotSize,
+      BigDecimal minStep,
+      String currency,
+      InstrumentType type,
+      BigDecimal nominal,
+      LocalDate maturityDate,
+      BigDecimal couponRate,
+      Integer couponFrequencyMonths,
+      LocalDate nextCouponDate) {
+    this(
+        ticker,
+        name,
+        lotSize,
+        minStep,
+        currency,
+        type,
+        nominal,
+        maturityDate,
+        couponRate,
+        couponFrequencyMonths,
+        nextCouponDate,
         null,
         null);
   }
