@@ -1,6 +1,7 @@
 package ru.trading.system.account;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import ru.trading.system.account.dto.AccountResponse;
 import ru.trading.system.auth.AuthService;
 import ru.trading.system.user.dto.RegisterRequest;
@@ -34,5 +36,20 @@ class AccountServiceIntegrationTest {
     assertEquals(0, account.balance().compareTo(BigDecimal.ZERO));
     assertEquals(0, account.reservedBalance().compareTo(BigDecimal.ZERO));
     assertEquals(0, account.availableBalance().compareTo(BigDecimal.ZERO));
+    assertEquals(AccountStatus.ACTIVE, account.status());
+  }
+
+  @Test
+  void closesEmptyAccountAndPreventsFurtherDeposits() {
+    UserResponse user =
+        authService.register(new RegisterRequest("close-account@example.test", "password123"));
+    AccountResponse account = accountService.findForUser(user.id()).getFirst();
+
+    AccountResponse closed = accountService.close(user.id(), account.id());
+
+    assertEquals(AccountStatus.CLOSED, closed.status());
+    assertThrows(
+        ResponseStatusException.class,
+        () -> accountService.deposit(account.id(), new BigDecimal("10")));
   }
 }

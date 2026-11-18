@@ -12,6 +12,8 @@ public interface PositionRepository extends JpaRepository<Position, PositionId> 
 
   List<Position> findByAccountUserIdOrderByIdSeccodeAsc(UUID userId);
 
+  boolean existsByAccountIdAndQuantityGreaterThan(UUID accountId, long quantity);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
       """

@@ -249,12 +249,17 @@ public class OrderService {
   }
 
   private Account findAccount(UUID userId, String currency) {
-    return accountRepository
-        .findByUserIdAndCurrency(userId, currency)
-        .orElseThrow(
-            () ->
-                new ResponseStatusException(
-                    HttpStatus.CONFLICT, currency.trim() + " account not found"));
+    Account account =
+        accountRepository
+            .findByUserIdAndCurrency(userId, currency)
+            .orElseThrow(
+                () ->
+                    new ResponseStatusException(
+                        HttpStatus.CONFLICT, currency.trim() + " account not found"));
+    if (!account.isActive()) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Account is closed");
+    }
+    return account;
   }
 
   private void executeCurrencyTrade(

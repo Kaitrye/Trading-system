@@ -37,6 +37,9 @@ public class PositionService {
             .findById(accountId)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+    if (!account.isActive()) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Account is closed");
+    }
     Instrument instrument =
         instrumentRepository
             .findById(ticker.trim().toUpperCase(Locale.ROOT))

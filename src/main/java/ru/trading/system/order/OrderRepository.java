@@ -19,6 +19,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
   List<Order> findByAccountUserIdOrderByCreatedAtDesc(UUID userId);
 
+  boolean existsByAccountIdAndStatusIn(UUID accountId, Collection<OrderStatus> statuses);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
       """

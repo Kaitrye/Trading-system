@@ -2,6 +2,8 @@ package ru.trading.system.account;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -43,6 +45,10 @@ public class Account {
   @Column(nullable = false, precision = 19, scale = 4)
   private BigDecimal reservedBalance;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 10)
+  private AccountStatus status;
+
   @Version
   @Column(nullable = false)
   private long version;
@@ -52,6 +58,15 @@ public class Account {
     this.currency = currency;
     this.balance = BigDecimal.ZERO;
     this.reservedBalance = BigDecimal.ZERO;
+    this.status = AccountStatus.ACTIVE;
+  }
+
+  public boolean isActive() {
+    return status == AccountStatus.ACTIVE;
+  }
+
+  public void close() {
+    status = AccountStatus.CLOSED;
   }
 
   public boolean reserve(BigDecimal amount) {

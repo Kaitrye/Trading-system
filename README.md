@@ -162,6 +162,13 @@ curl http://localhost:8080/api/v1/instruments \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+Закрытие пустого счёта:
+
+```bash
+curl -i -X DELETE http://localhost:8080/api/v1/accounts/<accountId> \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 Создание лимитной заявки:
 
 ```bash
@@ -245,6 +252,7 @@ curl -i -X POST http://localhost:8080/api/v1/accounts \
 | --- | --- | --- |
 | POST | /api/v1/accounts | открыть счёт в валюте |
 | GET | /api/v1/accounts | собственные счета |
+| DELETE | /api/v1/accounts/{accountId} | закрыть собственный пустой счёт |
 | GET | /api/v1/accounts/operations?page=0&size=50 | история операций |
 | GET | /api/v1/positions | собственные позиции |
 | GET | /api/v1/trades?page=0&size=50 | собственные сделки |
@@ -280,6 +288,8 @@ curl -i -X POST http://localhost:8080/api/v1/accounts \
 ~~~
 
 Количество должно быть кратно лоту инструмента, а цена — его минимальному шагу.
+
+Закрыть счёт можно только при нулевых балансе и резерве, а также при отсутствии активных заявок и ненулевых позиций. Закрытие сохраняет счёт и его историю со статусом `CLOSED`; удаление записи не производится.
 
 ### Администрирование
 
