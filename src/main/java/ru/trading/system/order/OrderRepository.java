@@ -50,7 +50,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
               and o.side = :side
               and o.status in :statuses
               and o.price <= :price
-            order by o.price asc, o.createdAt asc
+            order by o.price asc, o.createdAt asc, o.priority asc
             """)
     List<Order> findMatchingSellOrders(
             @Param("ticker") String ticker,
@@ -68,7 +68,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
               and o.side = :side
               and o.status in :statuses
               and o.price >= :price
-            order by o.price desc, o.createdAt asc
+            order by o.price desc, o.createdAt asc, o.priority asc
             """)
     List<Order> findMatchingBuyOrders(
             @Param("ticker") String ticker,
