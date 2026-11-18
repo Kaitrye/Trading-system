@@ -1,6 +1,7 @@
 package ru.trading.system.order;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import ru.trading.system.instrument.Instrument;
 import ru.trading.system.instrument.InstrumentRepository;
 import ru.trading.system.order.dto.CreateOrderRequest;
 import ru.trading.system.order.dto.OrderResponse;
+import ru.trading.system.order.dto.UpdateOrderRequest;
 import ru.trading.system.position.Position;
 import ru.trading.system.position.PositionId;
 import ru.trading.system.position.PositionRepository;
@@ -223,5 +225,45 @@ class OrderMatchingIntegrationTest {
     assertEquals(0, new BigDecimal("100").compareTo(buyerRub.getBalance()));
     assertEquals(0, new BigDecimal("10").compareTo(buyerUsd.getBalance()));
     assertEquals(1, tradeRepository.count());
+  }
+
+  @Test
+  void replacesActiveOrderAndMatchesItWithNewPrice() {
+    Instrument instrument =
+        instrumentRepository.save(
+            new Instrument("GAZP", "Газпром", 10, new BigDecimal("0.01"), "RUB"));
+    User seller = userRepository.save(new User("update-seller.test", "hash", Role.USER));
+    Account sellerAccount = accountRepository.save(new Account(seller, "RUB"));
+    Position sellerPosition = positionRepository.save(new Position(sellerAccount, instrument));
+    sellerPosition.credit(10);
+
+    User buyer = userRepository.save(new User("update-buyer.test", "hash", Role.USER));
+    Account buyerAccount = accountRepository.save(new Account(buyer, "RUB"));
+    buyerAccount.credit(new BigDecimal("1300"));
+
+    orderService.create(
+        seller.getId(), new CreateOrderRequest("GAZP", OrderSide.SELL, new BigDecimal("120"), 10));
+    OrderResponse original =
+        orderService.create(
+            buyer.getId(),
+            new CreateOrderRequest("GAZP", OrderSide.BUY, new BigDecimal("100"), 10));
+
+    OrderResponse replacement =
+        orderService.update(
+            buyer.getId(), original.id(), new UpdateOrderRequest(new BigDecimal("130"), 10));
+
+    assertEquals(OrderStatus.FILLED, replacement.status());
+    assertNotEquals(original.id(), replacement.id());
+    assertEquals(1, tradeRepository.count());
+    assertEquals(new BigDecimal("100"), buyerAccount.getBalance());
+    assertEquals(BigDecimal.ZERO, buyerAccount.getReservedBalance());
+    assertEquals(new BigDecimal("1200"), sellerAccount.getBalance());
+    assertEquals(
+        OrderStatus.CANCELLED,
+        orderService.findForUser(buyer.getId()).stream()
+            .filter(order -> order.id().equals(original.id()))
+            .findFirst()
+            .orElseThrow()
+            .status());
   }
 }

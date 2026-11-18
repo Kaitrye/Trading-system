@@ -19,6 +19,7 @@ import ru.trading.system.operation.AccountOperationRepository;
 import ru.trading.system.operation.OperationType;
 import ru.trading.system.order.dto.CreateOrderRequest;
 import ru.trading.system.order.dto.OrderResponse;
+import ru.trading.system.order.dto.UpdateOrderRequest;
 import ru.trading.system.position.Position;
 import ru.trading.system.position.PositionId;
 import ru.trading.system.position.PositionRepository;
@@ -43,17 +44,10 @@ public class OrderService {
             .findBySeccodeAndActiveTrue(ticker)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Instrument not found"));
-    if (request.quantity() % instrument.getLotSize() != 0) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Quantity must be a multiple of lot size");
-    }
-    if (request.price().remainder(instrument.getMinStep()).compareTo(BigDecimal.ZERO) != 0) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Price must be a multiple of minimum step");
-    }
+    validateOrderParameters(instrument, request.price(), request.quantity());
     Account account = findAccount(userId, instrument.getCurrency());
 
-    reserveForOrder(account, instrument, request);
+    reserveForOrder(account, instrument, request.side(), request.price(), request.quantity());
     Order order =
         orderRepository.saveAndFlush(
             new Order(account, instrument, request.side(), request.price(), request.quantity()));
@@ -61,9 +55,21 @@ public class OrderService {
     return toResponse(order);
   }
 
-  private void reserveForOrder(Account account, Instrument instrument, CreateOrderRequest request) {
-    if (request.side() == OrderSide.BUY) {
-      BigDecimal amount = request.price().multiply(BigDecimal.valueOf(request.quantity()));
+  private void validateOrderParameters(Instrument instrument, BigDecimal price, long quantity) {
+    if (quantity % instrument.getLotSize() != 0) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Quantity must be a multiple of lot size");
+    }
+    if (price.remainder(instrument.getMinStep()).compareTo(BigDecimal.ZERO) != 0) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Price must be a multiple of minimum step");
+    }
+  }
+
+  private void reserveForOrder(
+      Account account, Instrument instrument, OrderSide side, BigDecimal price, long quantity) {
+    if (side == OrderSide.BUY) {
+      BigDecimal amount = price.multiply(BigDecimal.valueOf(quantity));
       if (!account.reserve(amount)) {
         throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient available balance");
       }
@@ -72,7 +78,7 @@ public class OrderService {
 
     if (instrument.getType() == InstrumentType.CURRENCY_PAIR) {
       Account baseAccount = findAccount(account.getUser().getId(), instrument.getBaseCurrency());
-      if (!baseAccount.reserve(BigDecimal.valueOf(request.quantity()))) {
+      if (!baseAccount.reserve(BigDecimal.valueOf(quantity))) {
         throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient available balance");
       }
       return;
@@ -83,7 +89,7 @@ public class OrderService {
             .findById(new PositionId(account.getId(), instrument.getSeccode()))
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.CONFLICT, "Position not found"));
-    if (!position.reserve(request.quantity())) {
+    if (!position.reserve(quantity)) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient available shares");
     }
   }
@@ -165,19 +171,48 @@ public class OrderService {
   }
 
   @Transactional
+  public OrderResponse update(UUID userId, UUID orderId, UpdateOrderRequest request) {
+    Order order = findActiveOrderForUpdate(userId, orderId);
+    validateOrderParameters(order.getInstrument(), request.price(), request.quantity());
+
+    releaseReservation(order);
+    order.cancel();
+    Order replacement =
+        orderRepository.saveAndFlush(
+            new Order(
+                order.getAccount(),
+                order.getInstrument(),
+                order.getSide(),
+                request.price(),
+                request.quantity()));
+    reserveForOrder(
+        replacement.getAccount(),
+        replacement.getInstrument(),
+        replacement.getSide(),
+        replacement.getPrice(),
+        replacement.getQuantity());
+    match(replacement);
+    return toResponse(replacement);
+  }
+
+  @Transactional
   public OrderResponse cancel(UUID userId, UUID orderId) {
+    Order order = findActiveOrderForUpdate(userId, orderId);
+    releaseReservation(order);
+    order.cancel();
+    return toResponse(order);
+  }
+
+  private Order findActiveOrderForUpdate(UUID userId, UUID orderId) {
     Order order =
         orderRepository
-            .findByIdAndAccountUserId(orderId, userId)
+            .lockByIdAndAccountUserId(orderId, userId)
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
     if (!order.isActive()) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is no longer active");
     }
-
-    releaseReservation(order);
-    order.cancel();
-    return toResponse(order);
+    return order;
   }
 
   @Transactional

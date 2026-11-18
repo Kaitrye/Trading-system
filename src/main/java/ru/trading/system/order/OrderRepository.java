@@ -13,7 +13,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrderRepository extends JpaRepository<Order, UUID> {
 
-  Optional<Order> findByIdAndAccountUserId(UUID id, UUID userId);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select o from Order o where o.id = :id and o.account.user.id = :userId")
+  Optional<Order> lockByIdAndAccountUserId(@Param("id") UUID id, @Param("userId") UUID userId);
 
   List<Order> findByAccountUserIdOrderByCreatedAtDesc(UUID userId);
 
