@@ -13,6 +13,7 @@ import ru.trading.system.account.Account;
 import ru.trading.system.account.AccountRepository;
 import ru.trading.system.instrument.Instrument;
 import ru.trading.system.instrument.InstrumentRepository;
+import ru.trading.system.instrument.InstrumentType;
 import ru.trading.system.operation.AccountOperation;
 import ru.trading.system.operation.AccountOperationRepository;
 import ru.trading.system.operation.OperationType;
@@ -27,8 +28,6 @@ import ru.trading.system.trade.TradeRepository;
 @Service
 @RequiredArgsConstructor
 public class OrderService {
-  private static final String RUB = "RUB";
-
   private final OrderRepository orderRepository;
   private final AccountRepository accountRepository;
   private final InstrumentRepository instrumentRepository;
@@ -52,16 +51,7 @@ public class OrderService {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "Price must be a multiple of minimum step");
     }
-    if (!RUB.equals(instrument.getCurrency().trim())) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Only RUB instruments are supported");
-    }
-
-    Account account =
-        accountRepository
-            .findByUserIdAndCurrency(userId, RUB)
-            .orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.CONFLICT, "RUB account not found"));
+    Account account = findAccount(userId, instrument.getCurrency());
 
     reserveForOrder(account, instrument, request);
     Order order =
@@ -75,6 +65,14 @@ public class OrderService {
     if (request.side() == OrderSide.BUY) {
       BigDecimal amount = request.price().multiply(BigDecimal.valueOf(request.quantity()));
       if (!account.reserve(amount)) {
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient available balance");
+      }
+      return;
+    }
+
+    if (instrument.getType() == InstrumentType.CURRENCY_PAIR) {
+      Account baseAccount = findAccount(account.getUser().getId(), instrument.getBaseCurrency());
+      if (!baseAccount.reserve(BigDecimal.valueOf(request.quantity()))) {
         throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient available balance");
       }
       return;
@@ -119,6 +117,10 @@ public class OrderService {
   }
 
   private void executeTrade(Order buyOrder, Order sellOrder, BigDecimal price, long quantity) {
+    if (buyOrder.getInstrument().getType() == InstrumentType.CURRENCY_PAIR) {
+      executeCurrencyTrade(buyOrder, sellOrder, price, quantity);
+      return;
+    }
     BigDecimal reservedAmount = buyOrder.getPrice().multiply(BigDecimal.valueOf(quantity));
     BigDecimal cost = price.multiply(BigDecimal.valueOf(quantity));
     buyOrder.getAccount().executeBuy(reservedAmount, cost);
@@ -197,6 +199,11 @@ public class OrderService {
           .release(order.getPrice().multiply(BigDecimal.valueOf(order.getRemainingQuantity())));
       return;
     }
+    if (order.getInstrument().getType() == InstrumentType.CURRENCY_PAIR) {
+      findAccount(order.getAccount().getUser().getId(), order.getInstrument().getBaseCurrency())
+          .release(BigDecimal.valueOf(order.getRemainingQuantity()));
+      return;
+    }
     Position position =
         positionRepository
             .findById(
@@ -204,6 +211,49 @@ public class OrderService {
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.CONFLICT, "Position not found"));
     position.release(order.getRemainingQuantity());
+  }
+
+  private Account findAccount(UUID userId, String currency) {
+    return accountRepository
+        .findByUserIdAndCurrency(userId, currency)
+        .orElseThrow(
+            () ->
+                new ResponseStatusException(
+                    HttpStatus.CONFLICT, currency.trim() + " account not found"));
+  }
+
+  private void executeCurrencyTrade(
+      Order buyOrder, Order sellOrder, BigDecimal price, long quantity) {
+    BigDecimal baseAmount = BigDecimal.valueOf(quantity);
+    BigDecimal reservedQuoteAmount = buyOrder.getPrice().multiply(baseAmount);
+    BigDecimal quoteAmount = price.multiply(baseAmount);
+    Account buyerQuoteAccount = buyOrder.getAccount();
+    Account sellerQuoteAccount = sellOrder.getAccount();
+    Account buyerBaseAccount =
+        findAccount(
+            buyerQuoteAccount.getUser().getId(), buyOrder.getInstrument().getBaseCurrency());
+    Account sellerBaseAccount =
+        findAccount(
+            sellerQuoteAccount.getUser().getId(), sellOrder.getInstrument().getBaseCurrency());
+
+    buyerQuoteAccount.executeBuy(reservedQuoteAmount, quoteAmount);
+    sellerQuoteAccount.credit(quoteAmount);
+    sellerBaseAccount.executeBuy(baseAmount, baseAmount);
+    buyerBaseAccount.credit(baseAmount);
+    buyOrder.fill(quantity);
+    sellOrder.fill(quantity);
+    Trade trade =
+        tradeRepository.save(
+            new Trade(buyOrder.getInstrument(), price, quantity, buyOrder, sellOrder));
+    accountOperationRepository.saveAll(
+        List.of(
+            new AccountOperation(
+                buyerQuoteAccount, trade, OperationType.FX_BUY_QUOTE, quoteAmount.negate()),
+            new AccountOperation(buyerBaseAccount, trade, OperationType.FX_BUY_BASE, baseAmount),
+            new AccountOperation(
+                sellerBaseAccount, trade, OperationType.FX_SELL_BASE, baseAmount.negate()),
+            new AccountOperation(
+                sellerQuoteAccount, trade, OperationType.FX_SELL_QUOTE, quoteAmount)));
   }
 
   private OrderResponse toResponse(Order order) {

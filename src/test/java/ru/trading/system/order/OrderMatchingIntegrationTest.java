@@ -182,4 +182,46 @@ class OrderMatchingIntegrationTest {
             .orElseThrow()
             .getQuantity());
   }
+
+  @Test
+  void exchangesBaseAndQuoteCurrenciesForCurrencyPair() {
+    Instrument pair =
+        instrumentRepository.save(
+            new Instrument(
+                "USDRUB",
+                "US Dollar / Russian Ruble",
+                1,
+                new BigDecimal("0.0001"),
+                "RUB",
+                ru.trading.system.instrument.InstrumentType.CURRENCY_PAIR,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "USD",
+                "RUB"));
+    User seller = userRepository.save(new User("fx-seller@example.test", "hash", Role.USER));
+    Account sellerRub = accountRepository.save(new Account(seller, "RUB"));
+    Account sellerUsd = accountRepository.save(new Account(seller, "USD"));
+    sellerUsd.credit(new BigDecimal("10"));
+
+    User buyer = userRepository.save(new User("fx-buyer@example.test", "hash", Role.USER));
+    Account buyerRub = accountRepository.save(new Account(buyer, "RUB"));
+    Account buyerUsd = accountRepository.save(new Account(buyer, "USD"));
+    buyerRub.credit(new BigDecimal("1000"));
+
+    orderService.create(
+        seller.getId(),
+        new CreateOrderRequest(pair.getSeccode(), OrderSide.SELL, new BigDecimal("90"), 10));
+    orderService.create(
+        buyer.getId(),
+        new CreateOrderRequest(pair.getSeccode(), OrderSide.BUY, new BigDecimal("100"), 10));
+
+    assertEquals(0, BigDecimal.ZERO.compareTo(sellerUsd.getBalance()));
+    assertEquals(0, new BigDecimal("900").compareTo(sellerRub.getBalance()));
+    assertEquals(0, new BigDecimal("100").compareTo(buyerRub.getBalance()));
+    assertEquals(0, new BigDecimal("10").compareTo(buyerUsd.getBalance()));
+    assertEquals(1, tradeRepository.count());
+  }
 }
