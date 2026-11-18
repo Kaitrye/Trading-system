@@ -19,7 +19,7 @@ REST API торговой системы, выполненная как **тес
 
 ## Технологии
 
-- Java 21 и Spring Boot 4;
+- Java 21 и Spring Boot 3.5.16;
 - Spring Security, JWT;
 - Spring Data JPA, Hibernate, PostgreSQL 17, Flyway;
 - Maven;
