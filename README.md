@@ -47,29 +47,18 @@ flowchart LR
 
 ## Запуск в Docker
 
-1. Создайте локальный файл окружения:
-
-~~~bash
-cp .env.example .env
-~~~
-
-2. Сгенерируйте секрет JWT и внесите его значением JWT_SECRET в .env:
-
-~~~bash
-openssl rand -base64 32
-~~~
-
-3. Запустите приложение и PostgreSQL:
+Запуск для демонстрации не требует `.env` или ручной генерации секретов:
 
 ~~~bash
 docker compose up --build
 ~~~
 
-После запуска:
+Docker Compose автоматически передаёт значения из [.env.example](.env.example). После старта доступны:
 
 - API: http://localhost:8080
 - Swagger UI: http://localhost:8080/docs
 - Health check: http://localhost:8080/actuator/health
+- demo-администратор: `admin@example.com` / `admin12345`
 
 Остановка контейнеров:
 
@@ -81,21 +70,28 @@ docker compose down
 
 ## Конфигурация
 
-Шаблон переменных находится в [.env.example](.env.example).
+Значения в `.env.example` предназначены только для локальной демонстрации. Перед публикацией или любым не-локальным запуском создайте `.env`, который Docker Compose автоматически прочитает вместо demo-значений:
 
-| Переменная | Назначение | По умолчанию |
+~~~bash
+cp .env.example .env
+openssl rand -base64 32
+~~~
+
+Вставьте сгенерированное значение в `JWT_SECRET` файла `.env`, а также замените `POSTGRES_PASSWORD`, `BOOTSTRAP_ADMIN_EMAIL` и `BOOTSTRAP_ADMIN_PASSWORD` на собственные значения. Файл `.env` не попадает в Git.
+
+| Переменная | Назначение | Demo-значение |
 | --- | --- | --- |
-| JWT_SECRET | Base64-секрет для подписи JWT | обязательно |
+| JWT_SECRET | Base64-секрет для подписи JWT | статический, только для demo |
 | JWT_EXPIRATION_SECONDS | время жизни токена | 3600 |
 | POSTGRES_DB | имя базы данных | trading |
 | POSTGRES_USER | пользователь PostgreSQL | trading |
 | POSTGRES_PASSWORD | пароль PostgreSQL | trading |
 | POSTGRES_PORT | внешний порт PostgreSQL | 5432 |
 | APP_PORT | внешний порт приложения | 8080 |
-| BOOTSTRAP_ADMIN_EMAIL | email администратора при старте | необязательно |
-| BOOTSTRAP_ADMIN_PASSWORD | пароль администратора | необязательно |
+| BOOTSTRAP_ADMIN_EMAIL | email администратора при старте | admin@example.com |
+| BOOTSTRAP_ADMIN_PASSWORD | пароль администратора | admin12345 |
 
-Для запуска без Docker нужны PostgreSQL, переменные DB_URL, DB_USER, DB_PASSWORD и JWT_SECRET:
+Для запуска без Docker нужны работающий PostgreSQL и значения `DB_URL`, `DB_USER`, `DB_PASSWORD`. При отсутствии `.env` будут использованы те же demo JWT-настройки. Для не-локального запуска передайте собственный `JWT_SECRET`.
 
 ~~~bash
 JWT_SECRET=<base64-секрет> ./mvnw spring-boot:run

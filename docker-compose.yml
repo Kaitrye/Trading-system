@@ -1,6 +1,8 @@
 services:
   app:
     build: .
+    env_file:
+      - .env.example
     container_name: trading-system
     depends_on:
       postgres:
@@ -9,10 +11,10 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-trading}
       DB_USER: ${POSTGRES_USER:-trading}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-trading}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_SECRET: ${JWT_SECRET:-MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
-      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-admin12345}
     ports:
       - "${APP_PORT:-8080}:8080"
 
