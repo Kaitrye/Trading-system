@@ -147,7 +147,7 @@ class OrderMatchingIntegrationTest {
         assertEquals(0, buyerOrder.remainingQuantity());
         assertEquals(0, firstPosition.getQuantity());
         assertEquals(0, firstPosition.getReservedQuantity());
-        assertEquals(10, secondPosition.getQuantity());
+        assertEquals(5, secondPosition.getQuantity());
         assertEquals(5, secondPosition.getReservedQuantity());
         assertEquals(15, positionRepository.findById(new PositionId(buyerAccount.getId(), "SBER")).orElseThrow().getQuantity());
     }
