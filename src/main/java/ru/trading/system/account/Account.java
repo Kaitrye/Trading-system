@@ -10,15 +10,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.math.BigDecimal;
+import java.sql.Types;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import ru.trading.system.user.User;
-
-import java.math.BigDecimal;
-import java.sql.Types;
-import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -26,53 +25,53 @@ import java.util.UUID;
 @Table(name = "accounts")
 public class Account {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-    @JdbcTypeCode(Types.CHAR)
-    @Column(nullable = false, columnDefinition = "char(3)")
-    private String currency;
+  @JdbcTypeCode(Types.CHAR)
+  @Column(nullable = false, columnDefinition = "char(3)")
+  private String currency;
 
-    @Column(nullable = false, precision = 19, scale = 4)
-    private BigDecimal balance;
+  @Column(nullable = false, precision = 19, scale = 4)
+  private BigDecimal balance;
 
-    @Column(nullable = false, precision = 19, scale = 4)
-    private BigDecimal reservedBalance;
+  @Column(nullable = false, precision = 19, scale = 4)
+  private BigDecimal reservedBalance;
 
-    @Version
-    @Column(nullable = false)
-    private long version;
+  @Version
+  @Column(nullable = false)
+  private long version;
 
-    public Account(User user, String currency) {
-        this.user = user;
-        this.currency = currency;
-        this.balance = BigDecimal.ZERO;
-        this.reservedBalance = BigDecimal.ZERO;
+  public Account(User user, String currency) {
+    this.user = user;
+    this.currency = currency;
+    this.balance = BigDecimal.ZERO;
+    this.reservedBalance = BigDecimal.ZERO;
+  }
+
+  public boolean reserve(BigDecimal amount) {
+    if (balance.subtract(reservedBalance).compareTo(amount) < 0) {
+      return false;
     }
+    reservedBalance = reservedBalance.add(amount);
+    return true;
+  }
 
-    public boolean reserve(BigDecimal amount) {
-        if (balance.subtract(reservedBalance).compareTo(amount) < 0) {
-            return false;
-        }
-        reservedBalance = reservedBalance.add(amount);
-        return true;
-    }
+  public void release(BigDecimal amount) {
+    reservedBalance = reservedBalance.subtract(amount);
+  }
 
-    public void release(BigDecimal amount) {
-        reservedBalance = reservedBalance.subtract(amount);
-    }
+  public void executeBuy(BigDecimal reservedAmount, BigDecimal cost) {
+    reservedBalance = reservedBalance.subtract(reservedAmount);
+    balance = balance.subtract(cost);
+  }
 
-    public void executeBuy(BigDecimal reservedAmount, BigDecimal cost) {
-        reservedBalance = reservedBalance.subtract(reservedAmount);
-        balance = balance.subtract(cost);
-    }
-
-    public void credit(BigDecimal amount) {
-        balance = balance.add(amount);
-    }
+  public void credit(BigDecimal amount) {
+    balance = balance.add(amount);
+  }
 }

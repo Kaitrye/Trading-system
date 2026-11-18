@@ -1,25 +1,24 @@
 package ru.trading.system.order;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 class OrderTest {
 
-    @Test
-    void changesStatusWhenFilledPartiallyAndCompletely() {
-        Order order = new Order(null, null, OrderSide.BUY, new BigDecimal("100"), 20);
+  @Test
+  void changesStatusWhenFilledPartiallyAndCompletely() {
+    Order order = new Order(null, null, OrderSide.BUY, new BigDecimal("100"), 20);
 
-        order.fill(5);
+    order.fill(5);
 
-        assertEquals(OrderStatus.PARTIALLY_FILLED, order.getStatus());
-        assertEquals(15, order.getRemainingQuantity());
+    assertEquals(OrderStatus.PARTIALLY_FILLED, order.getStatus());
+    assertEquals(15, order.getRemainingQuantity());
 
-        order.fill(15);
+    order.fill(15);
 
-        assertEquals(OrderStatus.FILLED, order.getStatus());
-        assertEquals(0, order.getRemainingQuantity());
-    }
+    assertEquals(OrderStatus.FILLED, order.getStatus());
+    assertEquals(0, order.getRemainingQuantity());
+  }
 }

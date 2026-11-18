@@ -21,62 +21,61 @@ import ru.trading.system.instrument.Instrument;
 @Table(name = "positions")
 public class Position {
 
-    @EmbeddedId
-    private PositionId id;
+  @EmbeddedId private PositionId id;
 
-    @MapsId("accountId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "account_id", nullable = false)
-    private Account account;
+  @MapsId("accountId")
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "account_id", nullable = false)
+  private Account account;
 
-    @MapsId("seccode")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "seccode", nullable = false)
-    private Instrument instrument;
+  @MapsId("seccode")
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "seccode", nullable = false)
+  private Instrument instrument;
 
-    @Column(nullable = false)
-    private long quantity;
+  @Column(nullable = false)
+  private long quantity;
 
-    @Column(nullable = false)
-    private long reservedQuantity;
+  @Column(nullable = false)
+  private long reservedQuantity;
 
-    @Version
-    @Column(nullable = false)
-    private long version;
+  @Version
+  @Column(nullable = false)
+  private long version;
 
-    public Position(Account account, Instrument instrument) {
-        this.id = new PositionId(account.getId(), instrument.getSeccode());
-        this.account = account;
-        this.instrument = instrument;
-        this.quantity = 0;
-        this.reservedQuantity = 0;
+  public Position(Account account, Instrument instrument) {
+    this.id = new PositionId(account.getId(), instrument.getSeccode());
+    this.account = account;
+    this.instrument = instrument;
+    this.quantity = 0;
+    this.reservedQuantity = 0;
+  }
+
+  public boolean reserve(long amount) {
+    if (quantity - reservedQuantity < amount) {
+      return false;
     }
+    reservedQuantity += amount;
+    return true;
+  }
 
-    public boolean reserve(long amount) {
-        if (quantity - reservedQuantity < amount) {
-            return false;
-        }
-        reservedQuantity += amount;
-        return true;
-    }
+  public void release(long amount) {
+    reservedQuantity -= amount;
+  }
 
-    public void release(long amount) {
-        reservedQuantity -= amount;
-    }
+  public void executeSell(long amount) {
+    quantity -= amount;
+    reservedQuantity -= amount;
+  }
 
-    public void executeSell(long amount) {
-        quantity -= amount;
-        reservedQuantity -= amount;
-    }
+  public void credit(long amount) {
+    quantity += amount;
+  }
 
-    public void credit(long amount) {
-        quantity += amount;
+  public void redeem() {
+    if (reservedQuantity != 0) {
+      throw new IllegalStateException("Cannot redeem a position with reserved securities");
     }
-
-    public void redeem() {
-        if (reservedQuantity != 0) {
-            throw new IllegalStateException("Cannot redeem a position with reserved securities");
-        }
-        quantity = 0;
-    }
+    quantity = 0;
+  }
 }

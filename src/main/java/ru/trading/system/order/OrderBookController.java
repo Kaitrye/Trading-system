@@ -13,10 +13,10 @@ import ru.trading.system.order.dto.OrderBookResponse;
 @SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class OrderBookController {
-    private final OrderBookService orderBookService;
+  private final OrderBookService orderBookService;
 
-    @GetMapping("/{ticker}/order-book")
-    public OrderBookResponse getOrderBook(@PathVariable String ticker) {
-        return orderBookService.getOrderBook(ticker);
-    }
+  @GetMapping("/{ticker}/order-book")
+  public OrderBookResponse getOrderBook(@PathVariable String ticker) {
+    return orderBookService.getOrderBook(ticker);
+  }
 }

@@ -1,5 +1,15 @@
 package ru.trading.system.instrument;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -9,92 +19,95 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import ru.trading.system.instrument.dto.CreateInstrumentRequest;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class InstrumentServiceTest {
 
-    @Mock
-    private InstrumentRepository instrumentRepository;
+  @Mock private InstrumentRepository instrumentRepository;
 
-    @InjectMocks
-    private InstrumentService instrumentService;
+  @InjectMocks private InstrumentService instrumentService;
 
-    @Test
-    void createsNormalizedInstrument() {
-        when(instrumentRepository.existsById("SBER")).thenReturn(false);
-        when(instrumentRepository.save(any(Instrument.class))).thenAnswer(invocation -> invocation.getArgument(0));
+  @Test
+  void createsNormalizedInstrument() {
+    when(instrumentRepository.existsById("SBER")).thenReturn(false);
+    when(instrumentRepository.save(any(Instrument.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = instrumentService.create(
-                new CreateInstrumentRequest(" sber ", " Сбербанк ", 10, new BigDecimal("0.01"), " rub ")
-        );
+    var response =
+        instrumentService.create(
+            new CreateInstrumentRequest(
+                " sber ", " Сбербанк ", 10, new BigDecimal("0.01"), " rub "));
 
-        assertEquals("SBER", response.ticker());
-        assertEquals("Сбербанк", response.name());
-        assertEquals("RUB", response.currency());
-        assertEquals(InstrumentType.STOCK, response.type());
-        verify(instrumentRepository).existsById("SBER");
-    }
+    assertEquals("SBER", response.ticker());
+    assertEquals("Сбербанк", response.name());
+    assertEquals("RUB", response.currency());
+    assertEquals(InstrumentType.STOCK, response.type());
+    verify(instrumentRepository).existsById("SBER");
+  }
 
-    @Test
-    void createsBondWithCouponSchedule() {
-        when(instrumentRepository.existsById("OFZ26238")).thenReturn(false);
-        when(instrumentRepository.save(any(Instrument.class))).thenAnswer(invocation -> invocation.getArgument(0));
+  @Test
+  void createsBondWithCouponSchedule() {
+    when(instrumentRepository.existsById("OFZ26238")).thenReturn(false);
+    when(instrumentRepository.save(any(Instrument.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = instrumentService.create(new CreateInstrumentRequest(
-                "ofz26238", "ОФЗ 26238", 1, new BigDecimal("0.01"), "RUB",
-                InstrumentType.BOND, new BigDecimal("1000"), LocalDate.of(2041, 5, 15),
-                new BigDecimal("12.50"), 6, LocalDate.of(2027, 5, 15)
-        ));
+    var response =
+        instrumentService.create(
+            new CreateInstrumentRequest(
+                "ofz26238",
+                "ОФЗ 26238",
+                1,
+                new BigDecimal("0.01"),
+                "RUB",
+                InstrumentType.BOND,
+                new BigDecimal("1000"),
+                LocalDate.of(2041, 5, 15),
+                new BigDecimal("12.50"),
+                6,
+                LocalDate.of(2027, 5, 15)));
 
-        assertEquals(InstrumentType.BOND, response.type());
-        assertEquals(new BigDecimal("1000"), response.nominal());
-        assertEquals(LocalDate.of(2041, 5, 15), response.maturityDate());
-        assertEquals(new BigDecimal("12.50"), response.couponRate());
-        assertEquals(6, response.couponFrequencyMonths());
-        assertEquals(LocalDate.of(2027, 5, 15), response.nextCouponDate());
-    }
+    assertEquals(InstrumentType.BOND, response.type());
+    assertEquals(new BigDecimal("1000"), response.nominal());
+    assertEquals(LocalDate.of(2041, 5, 15), response.maturityDate());
+    assertEquals(new BigDecimal("12.50"), response.couponRate());
+    assertEquals(6, response.couponFrequencyMonths());
+    assertEquals(LocalDate.of(2027, 5, 15), response.nextCouponDate());
+  }
 
-    @Test
-    void rejectsDuplicateTicker() {
-        when(instrumentRepository.existsById("SBER")).thenReturn(true);
+  @Test
+  void rejectsDuplicateTicker() {
+    when(instrumentRepository.existsById("SBER")).thenReturn(true);
 
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () ->
-                instrumentService.create(new CreateInstrumentRequest("SBER", "Сбербанк", 10, new BigDecimal("0.01"), "RUB"))
-        );
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                instrumentService.create(
+                    new CreateInstrumentRequest(
+                        "SBER", "Сбербанк", 10, new BigDecimal("0.01"), "RUB")));
 
-        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
-        verify(instrumentRepository, never()).save(any());
-    }
+    assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    verify(instrumentRepository, never()).save(any());
+  }
 
-    @Test
-    void findsActiveInstrumentUsingNormalizedTicker() {
-        Instrument instrument = new Instrument("SBER", "Сбербанк", 10, new BigDecimal("0.01"), "RUB");
-        when(instrumentRepository.findBySeccodeAndActiveTrue("SBER")).thenReturn(Optional.of(instrument));
+  @Test
+  void findsActiveInstrumentUsingNormalizedTicker() {
+    Instrument instrument = new Instrument("SBER", "Сбербанк", 10, new BigDecimal("0.01"), "RUB");
+    when(instrumentRepository.findBySeccodeAndActiveTrue("SBER"))
+        .thenReturn(Optional.of(instrument));
 
-        var response = instrumentService.findByTicker(" sber ");
+    var response = instrumentService.findByTicker(" sber ");
 
-        assertEquals("SBER", response.ticker());
-        verify(instrumentRepository).findBySeccodeAndActiveTrue("SBER");
-    }
+    assertEquals("SBER", response.ticker());
+    verify(instrumentRepository).findBySeccodeAndActiveTrue("SBER");
+  }
 
-    @Test
-    void rejectsUnknownTicker() {
-        when(instrumentRepository.findBySeccodeAndActiveTrue("SBER")).thenReturn(Optional.empty());
+  @Test
+  void rejectsUnknownTicker() {
+    when(instrumentRepository.findBySeccodeAndActiveTrue("SBER")).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () ->
-                instrumentService.findByTicker("SBER")
-        );
+    ResponseStatusException exception =
+        assertThrows(ResponseStatusException.class, () -> instrumentService.findByTicker("SBER"));
 
-        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-    }
+    assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+  }
 }

@@ -2,6 +2,8 @@ package ru.trading.system.order;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,29 +18,27 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.trading.system.order.dto.CreateOrderRequest;
 import ru.trading.system.order.dto.OrderResponse;
 
-import java.util.List;
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/v1/orders")
 @SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class OrderController {
-    private final OrderService orderService;
+  private final OrderService orderService;
 
-    @GetMapping
-    public List<OrderResponse> findMyOrders(@AuthenticationPrincipal UUID userId) {
-        return orderService.findForUser(userId);
-    }
+  @GetMapping
+  public List<OrderResponse> findMyOrders(@AuthenticationPrincipal UUID userId) {
+    return orderService.findForUser(userId);
+  }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public OrderResponse create(@AuthenticationPrincipal UUID userId, @Valid @RequestBody CreateOrderRequest request) {
-        return orderService.create(userId, request);
-    }
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public OrderResponse create(
+      @AuthenticationPrincipal UUID userId, @Valid @RequestBody CreateOrderRequest request) {
+    return orderService.create(userId, request);
+  }
 
-    @DeleteMapping("/{orderId}")
-    public OrderResponse cancel(@AuthenticationPrincipal UUID userId, @PathVariable UUID orderId) {
-        return orderService.cancel(userId, orderId);
-    }
+  @DeleteMapping("/{orderId}")
+  public OrderResponse cancel(@AuthenticationPrincipal UUID userId, @PathVariable UUID orderId) {
+    return orderService.cancel(userId, orderId);
+  }
 }

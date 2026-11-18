@@ -10,21 +10,23 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    @Bean
-    OpenAPI tradingOpenApi() {
-        String securitySchemeName = "bearerAuth";
+  @Bean
+  OpenAPI tradingOpenApi() {
+    String securitySchemeName = "bearerAuth";
 
-        return new OpenAPI()
-                .info(new Info()
-                        .title("Trading System API")
-                        .version("v1")
-                        .description("API учебной торговой системы"))
-                .components(new Components().addSecuritySchemes(
-                        securitySchemeName,
-                        new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")
-                ));
-    }
+    return new OpenAPI()
+        .info(
+            new Info()
+                .title("Trading System API")
+                .version("v1")
+                .description("API учебной торговой системы"))
+        .components(
+            new Components()
+                .addSecuritySchemes(
+                    securitySchemeName,
+                    new SecurityScheme()
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")));
+  }
 }

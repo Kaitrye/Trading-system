@@ -4,10 +4,8 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record AccountResponse(
-        UUID id,
-        String currency,
-        BigDecimal balance,
-        BigDecimal reservedBalance,
-        BigDecimal availableBalance
-) {
-}
+    UUID id,
+    String currency,
+    BigDecimal balance,
+    BigDecimal reservedBalance,
+    BigDecimal availableBalance) {}

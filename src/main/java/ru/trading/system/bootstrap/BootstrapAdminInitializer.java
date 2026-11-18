@@ -10,10 +10,13 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class BootstrapAdminInitializer implements ApplicationRunner {
-    private static final Logger log = LoggerFactory.getLogger(BootstrapAdminInitializer.class);
-    private final BootstrapAdminService bootstrapAdminService;
-    @Override
-    public void run(ApplicationArguments args) {
-        if (bootstrapAdminService.createIfConfigured()) log.info("Bootstrap administrator created");
+  private static final Logger log = LoggerFactory.getLogger(BootstrapAdminInitializer.class);
+  private final BootstrapAdminService bootstrapAdminService;
+
+  @Override
+  public void run(ApplicationArguments args) {
+    if (bootstrapAdminService.createIfConfigured()) {
+      log.info("Bootstrap administrator created");
     }
+  }
 }

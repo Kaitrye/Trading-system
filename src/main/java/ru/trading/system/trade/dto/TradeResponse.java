@@ -5,10 +5,4 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public record TradeResponse(
-        UUID id,
-        String ticker,
-        BigDecimal price,
-        long quantity,
-        OffsetDateTime executedAt
-) {
-}
+    UUID id, String ticker, BigDecimal price, long quantity, OffsetDateTime executedAt) {}
