@@ -73,8 +73,8 @@ class ParallelOrdersSmokeIntegrationTest {
     List<Participant> buyers = createBuyers();
 
     try (ExecutorService executor = Executors.newFixedThreadPool(PARTICIPANTS)) {
-      runConcurrently(executor, sellers, OrderSide.SELL);
-      runConcurrently(executor, buyers, OrderSide.BUY);
+      runConcurrently(executor, sellers, OrderSide.SELL, OrderStatus.NEW);
+      runConcurrently(executor, buyers, OrderSide.BUY, OrderStatus.FILLED);
     }
 
     assertEquals(
@@ -116,7 +116,11 @@ class ParallelOrdersSmokeIntegrationTest {
   }
 
   private void runConcurrently(
-      ExecutorService executor, List<Participant> participants, OrderSide side) throws Exception {
+      ExecutorService executor,
+      List<Participant> participants,
+      OrderSide side,
+      OrderStatus expectedStatus)
+      throws Exception {
     CountDownLatch ready = new CountDownLatch(participants.size());
     CountDownLatch start = new CountDownLatch(1);
     List<Future<OrderResponse>> futures =
@@ -136,7 +140,7 @@ class ParallelOrdersSmokeIntegrationTest {
     assertTrue(ready.await(10, TimeUnit.SECONDS));
     start.countDown();
     for (Future<OrderResponse> future : futures) {
-      assertEquals(OrderStatus.FILLED, future.get(30, TimeUnit.SECONDS).status());
+      assertEquals(expectedStatus, future.get(30, TimeUnit.SECONDS).status());
     }
   }
 
@@ -145,8 +149,8 @@ class ParallelOrdersSmokeIntegrationTest {
       Account account = accountRepository.findById(seller.accountId()).orElseThrow();
       Position position =
           positionRepository.findById(new PositionId(seller.accountId(), ticker)).orElseThrow();
-      assertEquals(new BigDecimal("1000"), account.getBalance());
-      assertEquals(BigDecimal.ZERO, account.getReservedBalance());
+      assertEquals(0, new BigDecimal("1000").compareTo(account.getBalance()));
+      assertEquals(0, BigDecimal.ZERO.compareTo(account.getReservedBalance()));
       assertEquals(0, position.getQuantity());
       assertEquals(0, position.getReservedQuantity());
     }
@@ -154,8 +158,8 @@ class ParallelOrdersSmokeIntegrationTest {
       Account account = accountRepository.findById(buyer.accountId()).orElseThrow();
       Position position =
           positionRepository.findById(new PositionId(buyer.accountId(), ticker)).orElseThrow();
-      assertEquals(new BigDecimal("1000"), account.getBalance());
-      assertEquals(BigDecimal.ZERO, account.getReservedBalance());
+      assertEquals(0, new BigDecimal("1000").compareTo(account.getBalance()));
+      assertEquals(0, BigDecimal.ZERO.compareTo(account.getReservedBalance()));
       assertEquals(QUANTITY, position.getQuantity());
       assertEquals(0, position.getReservedQuantity());
     }

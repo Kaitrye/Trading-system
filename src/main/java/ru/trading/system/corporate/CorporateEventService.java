@@ -43,6 +43,9 @@ public class CorporateEventService {
     while (!bond.getNextCouponDate().isAfter(processingDate)
         && !bond.getNextCouponDate().isAfter(bond.getMaturityDate())) {
       payCoupon(bond);
+      if (bond.getNextCouponDate().equals(bond.getMaturityDate())) {
+        break;
+      }
       bond.advanceCouponDate();
     }
 
